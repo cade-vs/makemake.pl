@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #############################################################################
 =pod
-$Id: makemake.pl,v 1.3 2002/11/04 08:48:50 cade Exp $
+$Id: makemake.pl,v 1.4 2002/11/06 21:19:24 cade Exp $
 -----------------------------------------------------------------------------
 
 MakeMake.pl -- makefiles creating utility
@@ -299,7 +299,7 @@ sub make_target
     $_RANLIB  = $RANLIB[$REF[$n]];
     $_CFLAGS  = $CFLAGS[$REF[$n]] ;
     $_CCFLAGS = $CCFLAGS[$REF[$n]];
-    $_DEPFLAGS = $LDFLAGS[$REF[$n]];
+    $_DEPFLAGS = $DEPFLAGS[$REF[$n]];
     $_LDFLAGS = $LDFLAGS[$REF[$n]];
     $_ARFLAGS = $ARFLAGS[$REF[$n]];
     $_TARGET  = $TARGET[$REF[$n]];
@@ -313,7 +313,7 @@ sub make_target
   $_RANLIB  = $RANLIB[$n]  if $RANLIB[$n];
   $_CFLAGS  = $CFLAGS[$n]  if $CFLAGS[$n];
   $_CCFLAGS = $CCFLAGS[$n] if $CCFLAGS[$n];
-  $_DEPFLAGS = $DEPFLAGS[$n] if $LDFLAGS[$n];
+  $_DEPFLAGS = $DEPFLAGS[$n] if $DEPFLAGS[$n];
   $_LDFLAGS = $LDFLAGS[$n] if $LDFLAGS[$n];
   $_ARFLAGS = $ARFLAGS[$n] if $ARFLAGS[$n];
   $_TARGET  = $TARGET[$n]  if $TARGET[$n];
@@ -329,7 +329,7 @@ sub make_target
   $_CFLAGS   ||= $CFLAGS;  
   $_CCFLAGS  ||= $CCFLAGS; 
   $_LDFLAGS  ||= $LDFLAGS; 
-  $_DEPFLAGS ||= $LDFLAGS; 
+  $_DEPFLAGS ||= $DEPFLAGS; 
   $_ARFLAGS  ||= $ARFLAGS; 
   $_TARGET   ||= $TARGET;  
   $_SRC      ||= $SRC;     
