@@ -1,12 +1,12 @@
 #!/usr/bin/perl
 #############################################################################
 =pod
-$Id: makemake.pl,v 1.4 2002/11/06 21:19:24 cade Exp $
+$Id: makemake.pl,v 1.5 2002/12/15 16:48:12 cade Exp $
 -----------------------------------------------------------------------------
 
 MakeMake.pl -- makefiles creating utility
 
-(c) Vladi Belperchinov-Shabanski 1998-2001 <cade@biscom.net> <cade@datamax.bg>
+(c) Vladi Belperchinov-Shabanski 1998-2002 <cade@biscom.net> <cade@datamax.bg>
 (c) Ivaylo Baylov 1998 <ivo@datamax.bg>
 
 DISTRIBUTED `AS IS' WITHOUT ANY KIND OF WARRANTY OR ELSE.
@@ -189,91 +189,97 @@ should try first to contact Vladi <cade@biscom.net> or <cade@datamax.bg>
 -----------------------------------------------------------------------------
 =cut
 #############################################################################
+use strict;
 
-if ( $ARGV[0] )
+my %C = ( '_' =>  { 
+                  'CC'    => 'gcc',
+                  'LD'    => 'gcc',
+                  'AR'    => 'ar rv',
+                  'RANLIB'=> 'ranlib',
+                  'SRC'   => '*.c *.cpp *.cc *.cxx',
+                
+                  'MKDIR' => 'mkdir -p',
+                  'RMDIR' => 'rm -rf',
+                  'RMFILE'=> 'rm -f',
+                   } );
+
+my $C = find_config( $ARGV[0],
+                     "mm.conf",
+                     "make.make",
+                   );
+
+my ( $argv0 ) = $0 =~ /([^\/]+)$/g;
+
+read_config( $C, \%C ) or exit(1);
+
+#############################################################################
+
+print "### MAKEMAKE STARTS HERE #########################################\n" .
+      "#\n" .
+      "# Created by makemake.pl on " . localtime(time()) . "\n" .
+      "#\n" .
+      "##################################################################\n";
+
+# put default values
+my $CC     = $C{ '_' }{ 'CC' };
+my $LD     = $C{ '_' }{ 'LD' };
+my $AR     = $C{ '_' }{ 'AR' };
+my $RANLIB = $C{ '_' }{ 'RANLIB' };
+my $SRC    = $C{ '_' }{ 'SRC' };
+
+my $MKDIR  = $C{ '_' }{ 'MKDIR' };
+my $RMDIR  = $C{ '_' }{ 'RMDIR' };
+my $RMFILE = $C{ '_' }{ 'RMFILE' };
+
+my @MODULES = split /\s+/, $C{ '_' }{ 'MODULES' };
+
+my @TARGETS = grep !/^_$/, keys %C;
+
+print "\n### GLOBAL TARGETS ###############################################\n\n";
+
+print "default: all\n\n";
+print "re: rebuild\n\n";
+print "li: link\n\n";
+
+my $_all = "all: ";
+my $_clean = "clean: ";
+my $_rebuild = "rebuild: ";
+my $_link = "link: ";
+
+if ( @MODULES )
   {
-  do $ARGV[0];
+  $_all .= "modules ";
+  $_clean .= "clean-modules ";
+  $_rebuild .= "rebuild-modules ";
+  $_link .= "link-modules ";
   }
-else
+for( @TARGETS )
   {
-  if ( !(( -e "mm.conf" ) || ( -e "make.make" )) )
-    { die "makemake.pl: cannot find neither mm.conf nor make.make files\n" };
-
-  do 'mm.conf';
-  do 'make.make';
+  $_all .= "$_ ";
+  $_clean .= "clean-$_ ";
+  $_rebuild .= "rebuild-$_ ";
+  $_link .= "link-$_ ";
   }
 
-  print "### MAKEMAKE STARTS HERE #########################################\n" .
-        "#\n" .
-        "# Created by makemake.pl on " . localtime(time()) . "\n" .
-        "#\n" .
-        "##################################################################\n";
+print "$_all\n\n$_clean\n\n$_rebuild\n\n$_link\n";
 
-  # put default values
-  $CC     = "gcc"                  unless $CC;
-  $LD     = "gcc"                  unless $LD;
-  $AR     = "ar rv"                unless $AR;
-  $RANLIB = "ranlib"               unless $RANLIB;
-  $SRC    = "*.c *.cpp *.cc *.cxx" unless $SRC;
+print "\n### GLOBAL (AND USER) DEFS ##########################################\n";
 
-  $MKDIR  = "mkdir -p"             unless $MKDIR;
-  $RMDIR  = "rm -rf"               unless $RMDIR;
-  $RMFILE = "rm -f"                unless $RMFILE;
+print "\n";
+print "$_ = $C{ _ }{ $_ }\n" for ( sort keys %{ $C{ '_' } } );
+print "\n";
 
-  # $TARGET = "a.out"             unless $TARGET;
+my $n = 1;
+make_target( $n++, $_, $C{ $_ } ) for ( @TARGETS );
 
-  # if no target defined in the TARGET array take defaults
-
-  $TARGET[0] = $TARGET if $TARGET && $#TARGET == -1;
-
-  print "\n### GLOBAL TARGETS ###############################################\n";
-
-  print "\ndefault: all\n";
-  print "\nre: rebuild\n\n";
-  print "\nli: link\n\n";
-
-  $_all = "all: ";
-  $_clean = "clean: ";
-  $_rebuild = "rebuild: ";
-  $_link = "link: ";
-
-  if ( $MODULES )
-    {
-    $_all .= "modules ";
-    $_clean .= "clean-modules ";
-    $_rebuild .= "rebuild-modules ";
-    $_link .= "link-modules ";
-    }
-  for( @TARGET )
-    {
-    $_all .= "$_ ";
-    $_clean .= "clean-$_ ";
-    $_rebuild .= "rebuild-$_ ";
-    $_link .= "link-$_ ";
-    }
-
-  print "$_all\n\n$_clean\n\n$_rebuild\n\n$_link\n";
-
-  print "\n### GLOBAL DEFS ##################################################\n";
-
-  print "\n";
-  print "MKDIR      = $MKDIR\n";
-  print "RMDIR      = $RMDIR\n";
-  print "RMFILE     = $RMFILE\n\n";
-
-  $z = 0;
-  while( $z <= $#TARGET )
-    { make_target( $z++ ); } # output all targets...
-
-
-  if ( $MODULES )
-    {
-    print "### MODULES #####################################################\n\n";
-    make_module( "" );
-    make_module( "clean" );
-    make_module( "rebuild" );
-    make_module( "link" );
-    }
+if ( @MODULES )
+  {
+  print "### MODULES #####################################################\n\n";
+  make_module( "" );
+  make_module( "clean" );
+  make_module( "rebuild" );
+  make_module( "link" );
+  }
 
 print "\n### MAKEMAKE ENDS HERE ###########################################\n";
 
@@ -282,105 +288,70 @@ print "\n### MAKEMAKE ENDS HERE ###########################################\n";
 
 sub make_target
 {
-  my $n = shift;
+  my $n = shift; # name/number
+  my $t = shift; # target id
+  my $d = shift; # data
 
-  print "### TARGET $n: $TARGET[$n] #########################################\n\n";
+  my $CC       = $d->{ 'CC' };
+  my $LD       = $d->{ 'LD' };
+  my $AR       = $d->{ 'AR' };
+  my $RANLIB   = $d->{ 'RANLIB' };
+  my $CCFLAGS  = $d->{ 'CCFLAGS' } . ' ' . $d->{ 'CFLAGS' };
+  my $LDFLAGS  = $d->{ 'LDFLAGS' };
+  my $DEPFLAGS = $d->{ 'DEPFLAGS' };
+  my $ARFLAGS  = $d->{ 'ARFLAGS' };
+  my $TARGET   = $d->{ 'TARGET' };
+  my $SRC      = $d->{ 'SRC' };
+  my $OBJDIR   = ".OBJ.$n.$t";
 
-  #=======================================================================
-  # target init and setups
-
-  if ( $REF[$n] )
+  if ( ! $TARGET )
     {
-    # this tells us this target data is refering another one
-    # so we should copy referred data and then proceed normally
-    $_CC      = $CC[$REF[$n]];
-    $_LD      = $LD[$REF[$n]];
-    $_AR      = $AR[$REF[$n]];
-    $_RANLIB  = $RANLIB[$REF[$n]];
-    $_CFLAGS  = $CFLAGS[$REF[$n]] ;
-    $_CCFLAGS = $CCFLAGS[$REF[$n]];
-    $_DEPFLAGS = $DEPFLAGS[$REF[$n]];
-    $_LDFLAGS = $LDFLAGS[$REF[$n]];
-    $_ARFLAGS = $ARFLAGS[$REF[$n]];
-    $_TARGET  = $TARGET[$REF[$n]];
-    $_SRC     = $SRC[$REF[$n]];
+    $TARGET = $t;
+    logger( "warning: using target name as output ($t)" );
     }
 
-  # take local values just to be handy
-  $_CC      = $CC[$n]      if $CC[$n];
-  $_LD      = $LD[$n]      if $LD[$n];
-  $_AR      = $AR[$n]      if $AR[$n];
-  $_RANLIB  = $RANLIB[$n]  if $RANLIB[$n];
-  $_CFLAGS  = $CFLAGS[$n]  if $CFLAGS[$n];
-  $_CCFLAGS = $CCFLAGS[$n] if $CCFLAGS[$n];
-  $_DEPFLAGS = $DEPFLAGS[$n] if $DEPFLAGS[$n];
-  $_LDFLAGS = $LDFLAGS[$n] if $LDFLAGS[$n];
-  $_ARFLAGS = $ARFLAGS[$n] if $ARFLAGS[$n];
-  $_TARGET  = $TARGET[$n]  if $TARGET[$n];
-  $_SRC     = $SRC[$n]     if $SRC[$n];
+  print "### TARGET $n: $TARGET #######################################\n\n";
 
-  $_OBJDIR = ".OBJ.$n.$_TARGET";
+  print "CC_$n       = $CC\n";
+  print "LD_$n       = $LD\n";
+  print "AR_$n       = $AR\n";
+  print "RANLIB_$n   = $RANLIB\n";
+  print "CCFLAGS_$n  = $CCFLAGS\n";
+  print "LDFLAGS_$n  = $LDFLAGS\n";
+  print "DEPFLAGS_$n = $DEPFLAGS\n";
+  print "ARFLAGS_$n  = $ARFLAGS\n";
+  print "TARGET_$n   = $TARGET\n";
 
-  # for all undefined values -- take default ones
-  $_CC       ||= $CC;
-  $_LD       ||= $LD;      
-  $_AR       ||= $AR;      
-  $_RANLIB   ||= $RANLIB;
-  $_CFLAGS   ||= $CFLAGS;  
-  $_CCFLAGS  ||= $CCFLAGS; 
-  $_LDFLAGS  ||= $LDFLAGS; 
-  $_DEPFLAGS ||= $DEPFLAGS; 
-  $_ARFLAGS  ||= $ARFLAGS; 
-  $_TARGET   ||= $TARGET;  
-  $_SRC      ||= $SRC;     
+  my @OBJ;
+  my @SRC;
 
-  #=======================================================================
-
-  # now print main target variables
-  print "CC_$n      = $_CC\n";
-  print "LD_$n      = $_LD\n";
-  print "AR_$n      = $_AR\n";
-  print "RANLIB_$n  = $_RANLIB\n";
-  print "CFLAGS_$n  = $_CFLAGS\n";
-  print "CCFLAGS_$n = $_CCFLAGS\n";
-  print "LDFLAGS_$n = $_LDFLAGS\n";
-  print "DEPFLAGS_$n = $_DEPFLAGS\n";
-  print "ARFLAGS_$n = $_ARFLAGS\n";
-  print "TARGET_$n  = $_TARGET\n";
-
-  my @_OBJ;
-  my @_SRC;
-
-  # for( glob($_SRC) )
+  for( glob( $SRC ) )
   # or
-  for( split( /[\s\n]+/, `ls -1 $_SRC 2> /dev/null` ) )
+  # for( split( /[\s\n]+/, `ls -1 $_SRC 2> /dev/null` ) )
     {
-    push @_SRC,$_;
-    /(.*)\.[^\.]+/;
-    push @_OBJ,"$_OBJDIR/$1.o";
+    push @SRC, $_;
+    /^(.*)\.[^\.]+$/;
+    push @OBJ,"$OBJDIR/$1.o";
     }
 
-  print "\n### SOURCES FOR TARGET $n: $_TARGET #################################\n\n";
+  print "\n### SOURCES FOR TARGET $n: $TARGET #################################\n\n";
   print "SRC_$n= \\\n";
-  for( @_SRC )
+  for( @SRC )
     { print "     $_ \\\n"; }
 
-
-
-  print "\n#### OBJECTS FOR TARGET $n: $_TARGET ################################\n\n";
+  print "\n#### OBJECTS FOR TARGET $n: $TARGET ################################\n\n";
   print "OBJ_$n= \\\n";
-  for( @_OBJ )
+  for( @OBJ )
     { print "     $_ \\\n"; }
 
+  print "\n### TARGET DEFINITION FOR TARGET $n: $TARGET #######################\n\n";
 
+  print "$OBJDIR: \n" .
+        "\t\$(MKDIR) $OBJDIR\n\n";
 
-  print "\n### TARGET DEFINITION FOR TARGET $n: $_TARGET #######################\n\n";
-
-  print "$_OBJDIR: \n" .
-        "\t\$(MKDIR) $_OBJDIR\n\n";
-
-  print "$_TARGET: $_OBJDIR \$(OBJ_$n)\n";
-  if ($_TARGET =~ /\.a[ \t]*$/)
+  print "$t: $OBJDIR \$(OBJ_$n)\n";
+  my $target_link;
+  if ( $TARGET =~ /\.a$/ )
     {
     $target_link  = "\t\$(AR_$n) \$(ARFLAGS_$n) \$(TARGET_$n) \$(OBJ_$n)\n";
     $target_link .= "\t\$(RANLIB_$n) \$(TARGET_$n)\n";
@@ -392,28 +363,30 @@ sub make_target
     }
   print $target_link;
 
-  print "clean-$_TARGET: \n" .
+  print "clean-$t: \n" .
         "\t\$(RMFILE) \$(TARGET_$n)\n" .
-        "\t\$(RMDIR) $_OBJDIR\n\n";
+        "\t\$(RMDIR) $OBJDIR\n\n";
 
-  print "rebuild-$_TARGET: clean-$_TARGET $_TARGET\n\n";
+  print "rebuild-$t: clean-$t $t\n\n";
 
-  print "link-$_TARGET: $_OBJDIR \$(OBJ_$n)\n" .
-        "\t\$(RMFILE) $_TARGET\n" .
+  print "link-$t: $OBJDIR \$(OBJ_$n)\n" .
+        "\t\$(RMFILE) $TARGET\n" .
         $target_link;
 
-  print "### TARGET OBJECTS FOR TARGET $n: $_TARGET ##########################\n\n";
+  print "### TARGET OBJECTS FOR TARGET $n: $TARGET ##########################\n\n";
 
-  $c = 0;
-  while( $c <= $#_OBJ )
+  while( @SRC and @OBJ )
     {
-    $deps = file_deps( $_SRC[$c], $_DEPFLAGS  );
-    print "$_OBJ[$c]: $deps\n" .
-          "\t\$(CC_$n) \$(CFLAGS_$n) \$(CCFLAGS_$n) -c $_SRC[$c] -o $_OBJ[$c]\n";
-    $c++;
+    my $S = shift @SRC;
+    my $O = shift @OBJ;
+    my $DEPS = file_deps( $S, $DEPFLAGS  );
+    print "$O: $S $DEPS\n" .
+          "\t\$(CC_$n) \$(CFLAGS_$n) \$(CCFLAGS_$n) -c $S -o $O\n";
     }
 
   print "\n";
+  
+  logger( "info: target $t ($TARGET) ok" );
 }
 
 ###############################################################################
@@ -422,7 +395,6 @@ sub make_module
 {
   my $target = shift;
 
-  my @MODULES = split( /\s+/, $MODULES );
   my $modules_list = "";
   for( @MODULES )
     {
@@ -438,10 +410,92 @@ sub file_deps
 {
   my $fname = shift;
   my $depflags = shift;
-  $_ = `$CC -MM $depflags $fname 2> /dev/null`;
-  s/^[^:]+://;
-  s/[\n\r]$//;
-  $_;
+  my $deps = `$CC -MM $depflags $fname 2> /dev/null`;
+  $deps =~ s/^[^:]+://;
+  $deps =~ s/[\n\r]$//;
+  return $deps;
+}
+
+#############################################################################
+
+sub read_config
+{
+  my $fn = shift;
+  my $hr = shift;
+  my $sec = '_';
+  my $i;
+  if(! open $i, $fn )
+    {
+    logger( "error: cannot read file $fn" );
+    return 0;
+    }
+  while(<$i>)
+    {
+    chomp;
+    next if /^\s*[#;]/;
+    next unless /\S/;
+    if ( /^\s*\[\s*(\S+?)\s*(:\s*(\S+?))?\s*\]/ )
+      {
+      $sec = lc $1;
+      my $isa = ( lc $3 ) || '_';
+      if ( $hr->{ $sec } )
+        {
+        logger( "error: duplicate target $sec" );
+        return 0;
+        }
+      if ( $isa and $hr->{ $isa } )
+        {
+        my $ir = $hr->{ $isa }; # inherited hash reference
+        while( my ( $k, $v ) = each %$ir )
+          {
+          $hr->{ $sec }{ $k } = $v;
+          }
+        }
+      next;
+      }
+    if ( /^\s*(\S+)+\s*(\+)?=+\s*(.+)\s*$/ )
+      {
+      if ( $2 eq '+' )
+        {
+        $hr->{ $sec }{ uc $1 } .= ' ' . fixval( $3 );
+        }
+      else
+        {
+        $hr->{ $sec }{ uc $1 } = fixval( $3 );
+        }
+      next;
+      }
+    logger( "error: parse error in $fn, line $., ($_)" );
+    return 0;  
+    }
+  close $i;  
+  return 1;
+}
+
+sub fixval
+{
+  my $s = shift;
+  $s =~ s/^["'](.+)['"]$/$1/;
+  return $s;
+}
+
+###############################################################################
+
+sub find_config
+{
+  for ( @_ )
+    {
+    return $_ if -e $_;
+    };
+  return undef;
+}
+
+###############################################################################
+
+sub logger
+{
+  my $msg = shift;
+  print STDERR "$argv0: $msg\n";
 }
 
 ### EOF #######################################################################
