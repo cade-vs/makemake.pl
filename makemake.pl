@@ -177,7 +177,7 @@ should try first to contact Vladi <cade@biscom.net> or <cade@datamax.bg>
 
 =head1 VERSION
 
-$Id: makemake.pl,v 1.7 2003/04/28 17:18:13 cade Exp $
+$Id: makemake.pl,v 1.8 2004/12/29 02:49:29 cade Exp $
 
 =cut
 #############################################################################
@@ -372,8 +372,10 @@ sub make_target
     my $S = shift @SRC;
     my $O = shift @OBJ;
     my $DEPS = file_deps( $S, $DEPFLAGS  );
+    
+    my $SS = sprintf "%-20s", $S; # pretty printing
     print "$O: $S $DEPS\n" .
-          "\t\$(CC_$n) \$(CFLAGS_$n) \$(CCFLAGS_$n) -c $S -o $O\n";
+          "\t\$(CC_$n) \$(CFLAGS_$n) \$(CCFLAGS_$n) -c $SS -o $O\n";
     }
 
   print "\n";
