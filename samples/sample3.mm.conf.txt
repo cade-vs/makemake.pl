@@ -1,0 +1,15 @@
+#
+# this file is used to create full-featured vslib incl. unicon features
+#
+
+$CC[0]      = "g++";
+$LD[0]      = "g++";
+$CCFLAGS[0] = "-I. -I/usr/include/ncurses -O2 \$(CCDEF)";
+$LDFLAGS[0] = "\$(LDDEF)";
+$TARGET[0]  = "libvslib.a";
+$SRC[0]     = "*.cpp";
+$HDR[0]     = "*.h";
+
+$CCFLAGS[1] = "-I. -I/usr/include/ncurses -O2 \$(CCDEF) -DTEST";
+$LDFLAGS[1] = "\$(LDDEF) -lncurses";
+$TARGET[1]  = "test.libvslib";

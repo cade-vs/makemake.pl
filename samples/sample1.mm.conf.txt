@@ -1,0 +1,5 @@
+
+$CCFLAGS = "-O2 -D_SEE_EXE_ -I../vslib -I/usr/local/nscurses";
+$LDFLAGS = "-lvslib -L../vslib -lncurses";
+$SRC     = "*.cpp";
+$TARGET  = "see";
