@@ -1,195 +1,185 @@
 #!/usr/bin/perl
 #############################################################################
 =pod
-$Id: makemake.pl,v 1.5 2002/12/15 16:48:12 cade Exp $
------------------------------------------------------------------------------
 
-MakeMake.pl -- makefiles creating utility
+=head1 NAME
 
-(c) Vladi Belperchinov-Shabanski 1998-2002 <cade@biscom.net> <cade@datamax.bg>
-(c) Ivaylo Baylov 1998 <ivo@datamax.bg>
+MakeMake.pl -- Perl-based C/C++ makefile generator
 
-DISTRIBUTED `AS IS' WITHOUT ANY KIND OF WARRANTY OR ELSE.
-YOU MAY USE, MODIFY AND DISTRIBUTE THIS UTILITY AS LONG AS
-THE ORIGINAL CREDITS ARE KEPT INTACT!
-(AND YOU CREDIT YOURSELF FOR THE APROPRIATE MODIFICATIONS)
+=head1 SYNOPSIS
 
------------------------------------------------------------------------------
+  makemake.pl > makefile
+  makemake.pl make.conf > makefile
 
-CREDITS ANS MODIFICATIONS:
+=head1 DESCRIPTION
 
-dec1998: cade@biscom.net, ivo@datamax.bg
-         * first version *
-         though there were a number of utilities like this I still haven't
-         found what I'm looking for... :)
-         the closest approach is `tmake' of Troll Tech used for `Qt', but
-         is far too complex...
+input file is `mm.conf', `make.make' or name given as 1st arg.
 
-oct1999: cade@biscom.net
-         added multi-target feature
+output is printed to the stdout.
 
-aug2000: cade@biscom.net
-         general cleanup, target clean uses `rm -rf' instead of `rmdir'
-         added targets `rebuild' and `link' (does `relink' actually)
-         globbing replaced with the use of `ls'
-
-dec2000: cade@biscom.net
-         added modules (subdir targets) support:
-         $MODULES = "module1 module2 ...";
-         now target name is required and not set to `a.out' by default
-
-mar2001: cade@biscom.net
-         added $MKDIR,$RMDIR,$RMFILE vars to support non-unix or
-         non-standard commands for directory and file create/delete
-         $REF[n] thing and target `re' are back :) see examples below
-
-jun2002: cade@biscom.net
-         ranlib support (for versions of ar which don't have `s')
-
-oct2002: jambo@datamax.bg
-         $DEPFLAGS added for optional args for dependency checks.
-         gcc -MM $DEPFLAGS file...
-
-nov2002: cade@datamax.bg
-         fixed modules build order (modules first)
-
------------------------------------------------------------------------------
-
-GENERAL USAGE AND TIPS:
-input file is `mm.conf' or/and `make.make' or given file as 1st arg
-output is printed to the stdout
-
-usage: makemake.pl > makefile
-usage: makemake.pl mm.dos.conf > makefile
-...
-
-mm.conf/make.make files are actually real perl programs so you can do
-whatever you want in there as long as you provide at the end variables
-used by makemake.pl:
-
----cut---
-$CC      = "gcc";              # set compiler executable
-$LD      = "gcc";              # set linker executable
-$CFLAGS  = "-g";               # this is concatenated to $CCFLAGS
-$CCFLAGS = "-I../vslib -I/usr/include/ncurses -O2"; # set compiler flags
-$LDFLAGS = "-L../vslib -lvslib -lncurses"; # set linker flags executable
-$TARGET  = "vfu";              # set target name
-$SRC     = "*.cpp";            # set source files
-$MODULES = "vslib vfu ftparc"; # set modules (subdirectory targets)
----cut---
-
-If you set target name to something that ends with `.a' -- makemake.pl will
-produce library file target!
+mm.conf/make.make format is:
 
 
+  ---begin---
+  # comments begin with # or ;
+  ; this is also comment
+  
+  # defaults for all targets
+  CC      = gcc
+  LD      = gcc
+  AR      = ar rv
+  RANLIB  = ranlib
+  SRC     = *.c *.cpp *.cc *.cxx
+  
+  # default commands
+  MKDIR   = mkdir -p
+  RMDIR   = rm -rf
+  RMFILE  = rm -f
+  
+  # if labels above doesn't exist in the input file the values shown
+  # are considered defaults
+  
+  # optional modules, subdirectories
+  MODULES = module1 module2 module3
+  
+  # any other labels here are preserved but not used
+  # this could be usefull to use make(1) vars, see next example
+  DEBUG   = -g -pg
+  
+  [target-name-1]
+  
+  # this labels are required only if they should be different from
+  # the defaults above
+  CC      = gcc
+  LD      = gcc
+  CFLAGS  = $(DEBUG)
+  CCFLAGS = -I../vslib -I/usr/include/ncurses -O2
+  LDFLAGS = -L../vslib -lvslib -lncurses
+  SRC     = *.cpp            # set source files
+  # if `TARGET' is skipped then the output file name is taken from the
+  # target name (i.e. `target-name-1' in this example)
+  TARGET  = vfu
+  
+  [target-name-2]
+  
+  ...
+  
+  ---end-----
 
+label `CFLAGS' is optional and is appended to `CCFLAGS' value
 
-Multiple targets are defined in this way:
+also each label's value can be appended to previous (or to defaults) with
+`+=' operator:
 
----cut---
-# this is target 0 (first one!)
-$CC[0]      = "gcc";              # set compiler executable
-$LD[0]      = "gcc";              # set linker executable
-$CFLAGS[0]  = "-g";               # this is concatenated to $CCFLAGS
-$CCFLAGS[0] = "-I../vslib -I/usr/include/ncurses -O2"; # set compiler flags
-$LDFLAGS[0] = "-L../vslib -lvslib -lncurses"; # set linker flags executable
-$TARGET[0]  = "vfu";              # set target name
-$SRC[0]     = "*.cpp";            # set source files
+  ---cut---
+  SRC     = vstring.cpp 
+  SRC    += vstrlib.cpp 
+  SRC    += regexp3.cpp
+  ---cut---
 
-# this is target 1 (second one!)
-$CC[1]      = "gcc";              # set compiler executable
-$LD[1]      = "gcc";              # set linker executable
-$CFLAGS[1]  = "-g";               # this is concatenated to $CCFLAGS
-$CCFLAGS[1] = "-I../vslib -I/usr/include/ncurses -O2"; # set compiler flags
-$LDFLAGS[1] = "-L../vslib -lvslib -lncurses"; # set linker flags executable
-$TARGET[1]  = "vfu";              # set target name
-$SRC[1]     = "*.cpp";            # set source files
+every target can inherit another one:
 
-# modules are global! you cannot have $MODULES[0] for example.
-$MODULES    = "vslib vfu ftparc"; # set modules (subdirectory targets)
----cut---
+  ---cut---
+  
+  [vstring.a]
+  
+  CC      = g++
+  LD      = g++
+  CCFLAGS = -I. -O2
+  TARGET  = libvstring.a
+  SRC     = vstring.cpp vstrlib.cpp regexp3.cpp
+  
+  [debug-vstring.a: vstring.a]
+  
+  CCFLAGS += -g
+  TARGET  = libvstring_dbg.a
+  
+  ---cut---
 
+i.e. target `debug-vstring.a' inherits `vstring.a' but appends `-g' to the
+compile options and changes output file name to `libvstring_dbg.a'
 
+if you set target name to something that ends with `.a' -- makemake.pl will
+produce library file target (i.e. will invoke AR instead of LD).
 
+the minimum mm.conf is:
 
+  ---cut---
+  [hi]
+  ---cut---
 
-Fields/vars without numbers ( [0]... ) are considered target 0 as well as
-globals so you can miss everything except $TARGET[n] and all the rest will
-be filled auto:
+which will produce executable named `hi' out from all sources in the current
+directory...
 
----cut---
-# this is target 0 and also globals!
-$CC      = "gcc";              # set compiler executable
-$LD      = "gcc";              # set linker executable
-$CCFLAGS = "-I../vslib -I/usr/include/ncurses -O2"; # set compiler flags
-$LDFLAGS = "-L../vslib -lvslib -lncurses"; # set linker flags executable
-$SRC     = "*.cpp";            # set source files
+=head1 CREDITS ANS MODIFICATIONS (HISTORY)
 
-# this is target 0 (first one!)
-$CFLAGS[0]  = "-g";       # we want debug info!
-$TARGET[0]  = "test-vfu"; # set target name for debug binary
+  dec1998: cade@biscom.net, ivo@datamax.bg
+           * first version *
+           though there are several utilities like this I still haven't
+           found what I'm looking for... :)
+           the closest approach is `tmake' ( `qmake' recently, 2002 ) made by
+           Troll Tech for their `Qt' toolkit, but is far too complex...
+           
+           also I wanted it in Perl :)
+  
+  oct1999: cade@biscom.net
+           added multi-target feature
+  
+  aug2000: cade@biscom.net
+           general cleanup, target clean uses `rm -rf' instead of `rmdir'
+           added targets `rebuild' and `link' (does `relink' actually)
+           globbing replaced with the use of `ls'
+  
+  dec2000: cade@biscom.net
+           added modules (subdir targets) support:
+           $MODULES = "module1 module2 ...";
+           now target name is required and not set to `a.out' by default
+  
+  mar2001: cade@biscom.net
+           added $MKDIR,$RMDIR,$RMFILE vars to support non-unix or
+           non-standard commands for directory and file create/delete
+           $REF[n] thing and target `re' are back :) see examples below
+  
+  jun2002: cade@biscom.net
+           ranlib support (for versions of ar which don't have `s')
+  
+  oct2002: jambo@datamax.bg
+           $DEPFLAGS added for optional args for dependency checks.
+           gcc -MM $DEPFLAGS file...
+  
+  nov2002: cade@datamax.bg
+           fixed modules build order (modules first)
+  
+  dec2002: cade@datamax.bg
+           input file (mm.conf) format has changed. it is no more perl source
+           but is simpler. near complete rewrite done.
 
-# this is target 1 (second one!)
-$CFLAGS[1]  = "-O2";      # now we prefer to optimize!
-$TARGET[1]  = "vfu";      # set target name for non-debug binary
+=head1 AUTHORS
 
-# modules are global! you cannot have $MODULES[0] for example.
-$MODULES    = "vslib vfu ftparc"; # set modules (subdirectory targets)
----cut---
+ (c) Vladi Belperchinov-Shabanski 1998-2002 
+       <cade@biscom.net> <cade@datamax.bg>
+ (c) Ivaylo Baylov 1998 
+       <ivo@datamax.bg>
 
+=head1 LICENSE
 
+DISTRIBUTED UNDER GNU GPL. FOR FULL TEXT SEE ENCLOSED `COPYING' FILE.
 
+=head1 FEEDBACK
 
-
-NOTE: You cannot skip target numbers! If you do this:
-
----cut---
-# this is target 0 (first one!)
-$CFLAGS[0]  = "-g";       # we want debug info!
-$TARGET[0]  = "test-vfu"; # set target name for debug binary
-
-# this is target 2 (we want third here but this is wrong!)
-$CFLAGS[2]  = "-O2";      # now we prefer to optimize!
-$TARGET[2]  = "vfu";      # set target name for non-debug binary
----cut---
-
-You will end up with just one target!
-
-
-
-The following fields/variables have default values and so you may skip
-them if you want:
-
----cut---
-$CC     = "gcc";                  # default compiler
-$LD     = "gcc";                  # default linker
-$AR     = "ar rvs";               # default archiver (librarian)
-$SRC    = "*.c *.cpp *.cc *.cxx"; # default sources set
-
-# usually under unix you don't need to change these
-$MKDIR  = "mkdir -p";  # command to create directory
-$RMDIR  = "rm -rf";    # command to remove directory
-$RMFILE = "rm -f";     # command to remove file(s)
----cut---
-
-i.e. the minimum mm.conf is:
-
----cut---
-$TARGET = "hi";
----cut---
-
-
-
------------------------------------------------------------------------------
-
-FOR ANY PROBLEMS, REMARKS, NOTES -- CONTACT AUTHORS FREELY!
+For any questions, problems, notes contact authors freely!
 Note that since Ivo Baylov does not work actively on makemake.pl you
 should try first to contact Vladi <cade@biscom.net> or <cade@datamax.bg>
 
------------------------------------------------------------------------------
+=head1 VERSION
+
+$Id: makemake.pl,v 1.6 2002/12/15 18:20:08 cade Exp $
+
 =cut
 #############################################################################
 use strict;
+
+our @SECTIONS; # filled by read_config()
 
 my %C = ( '_' =>  { 
                   'CC'    => 'gcc',
@@ -214,11 +204,8 @@ read_config( $C, \%C ) or exit(1);
 
 #############################################################################
 
-print "### MAKEMAKE STARTS HERE #########################################\n" .
-      "#\n" .
-      "# Created by makemake.pl on " . localtime(time()) . "\n" .
-      "#\n" .
-      "##################################################################\n";
+print comment( "### MAKEMAKE STARTS HERE #" );
+print comment( "### Created by makemake.pl on " . localtime(time()) . " #" );
 
 # put default values
 my $CC     = $C{ '_' }{ 'CC' };
@@ -233,9 +220,9 @@ my $RMFILE = $C{ '_' }{ 'RMFILE' };
 
 my @MODULES = split /\s+/, $C{ '_' }{ 'MODULES' };
 
-my @TARGETS = grep !/^_$/, keys %C;
+my @TARGETS = @SECTIONS;
 
-print "\n### GLOBAL TARGETS ###############################################\n\n";
+print comment( "### GLOBAL TARGETS #" );
 
 print "default: all\n\n";
 print "re: rebuild\n\n";
@@ -263,7 +250,7 @@ for( @TARGETS )
 
 print "$_all\n\n$_clean\n\n$_rebuild\n\n$_link\n";
 
-print "\n### GLOBAL (AND USER) DEFS ##########################################\n";
+print comment( "### GLOBAL (AND USER) DEFS #" );
 
 print "\n";
 print "$_ = $C{ _ }{ $_ }\n" for ( sort keys %{ $C{ '_' } } );
@@ -274,14 +261,14 @@ make_target( $n++, $_, $C{ $_ } ) for ( @TARGETS );
 
 if ( @MODULES )
   {
-  print "### MODULES #####################################################\n\n";
+  print comment( "### MODULES #" );
   make_module( "" );
   make_module( "clean" );
   make_module( "rebuild" );
   make_module( "link" );
   }
 
-print "\n### MAKEMAKE ENDS HERE ###########################################\n";
+print comment( "### MAKEMAKE ENDS HERE #" );
 
 
 ###############################################################################
@@ -302,7 +289,7 @@ sub make_target
   my $ARFLAGS  = $d->{ 'ARFLAGS' };
   my $TARGET   = $d->{ 'TARGET' };
   my $SRC      = $d->{ 'SRC' };
-  my $OBJDIR   = ".OBJ.$n.$t";
+  my $OBJDIR   = ".OBJ.$t";
 
   if ( ! $TARGET )
     {
@@ -310,7 +297,7 @@ sub make_target
     logger( "warning: using target name as output ($t)" );
     }
 
-  print "### TARGET $n: $TARGET #######################################\n\n";
+  print comment( "### TARGET $n: $TARGET #" );
 
   print "CC_$n       = $CC\n";
   print "LD_$n       = $LD\n";
@@ -334,17 +321,17 @@ sub make_target
     push @OBJ,"$OBJDIR/$1.o";
     }
 
-  print "\n### SOURCES FOR TARGET $n: $TARGET #################################\n\n";
+  print comment( "### SOURCES FOR TARGET $n: $TARGET #" );
   print "SRC_$n= \\\n";
   for( @SRC )
     { print "     $_ \\\n"; }
 
-  print "\n#### OBJECTS FOR TARGET $n: $TARGET ################################\n\n";
+  print comment( "#### OBJECTS FOR TARGET $n: $TARGET #" );
   print "OBJ_$n= \\\n";
   for( @OBJ )
     { print "     $_ \\\n"; }
 
-  print "\n### TARGET DEFINITION FOR TARGET $n: $TARGET #######################\n\n";
+  print comment( "### TARGET DEFINITION FOR TARGET $n: $TARGET #" );
 
   print "$OBJDIR: \n" .
         "\t\$(MKDIR) $OBJDIR\n\n";
@@ -373,7 +360,7 @@ sub make_target
         "\t\$(RMFILE) $TARGET\n" .
         $target_link;
 
-  print "### TARGET OBJECTS FOR TARGET $n: $TARGET ##########################\n\n";
+  print comment( "### TARGET OBJECTS FOR TARGET $n: $TARGET #" );
 
   while( @SRC and @OBJ )
     {
@@ -423,6 +410,9 @@ sub read_config
   my $fn = shift;
   my $hr = shift;
   my $sec = '_';
+  
+  @SECTIONS = ();
+  
   my $i;
   if(! open $i, $fn )
     {
@@ -436,8 +426,9 @@ sub read_config
     next unless /\S/;
     if ( /^\s*\[\s*(\S+?)\s*(:\s*(\S+?))?\s*\]/ )
       {
-      $sec = lc $1;
-      my $isa = ( lc $3 ) || '_';
+      $sec = $1;
+      push @SECTIONS, $sec;
+      my $isa = ( $3 ) || '_';
       if ( $hr->{ $sec } )
         {
         logger( "error: duplicate target $sec" );
@@ -453,7 +444,7 @@ sub read_config
         }
       next;
       }
-    if ( /^\s*(\S+)+\s*(\+)?=+\s*(.+)\s*$/ )
+    if ( /^\s*(\S+)+\s*(\+)?=+(.*)$/ )
       {
       if ( $2 eq '+' )
         {
@@ -475,11 +466,21 @@ sub read_config
 sub fixval
 {
   my $s = shift;
+  $s =~ s/^\s+//;
+  $s =~ s/\s+$//;
   $s =~ s/^["'](.+)['"]$/$1/;
   return $s;
 }
 
 ###############################################################################
+
+sub comment
+{
+  my $s = shift;
+  $s .= '#' x 80;
+  $s = substr( $s, 0, 80 );
+  return "\n$s\n\n";
+}
 
 sub find_config
 {
@@ -489,8 +490,6 @@ sub find_config
     };
   return undef;
 }
-
-###############################################################################
 
 sub logger
 {
