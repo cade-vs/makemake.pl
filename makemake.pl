@@ -154,9 +154,13 @@ directory...
            input file (mm.conf) format has changed. it is no more perl source
            but is simpler. near complete rewrite done.
 
+  jan2003: cade@biscom.net
+           DEPS added which could be used as extra dependencies to other
+           target in the same makefile (f.e. test apps for a library)
+
 =head1 AUTHORS
 
- (c) Vladi Belperchinov-Shabanski 1998-2002 
+ (c) Vladi Belperchinov-Shabanski 1998-2003
        <cade@biscom.net> <cade@datamax.bg>
  (c) Ivaylo Baylov 1998 
        <ivo@datamax.bg>
@@ -167,13 +171,13 @@ DISTRIBUTED UNDER GNU GPL. FOR FULL TEXT SEE ENCLOSED `COPYING' FILE.
 
 =head1 FEEDBACK
 
-For any questions, problems, notes contact authors freely!
+For any questions, problems, notes (wishes?:)) contact authors freely!
 Note that since Ivo Baylov does not work actively on makemake.pl you
 should try first to contact Vladi <cade@biscom.net> or <cade@datamax.bg>
 
 =head1 VERSION
 
-$Id: makemake.pl,v 1.6 2002/12/15 18:20:08 cade Exp $
+$Id: makemake.pl,v 1.7 2003/04/28 17:18:13 cade Exp $
 
 =cut
 #############################################################################
@@ -289,6 +293,7 @@ sub make_target
   my $ARFLAGS  = $d->{ 'ARFLAGS' };
   my $TARGET   = $d->{ 'TARGET' };
   my $SRC      = $d->{ 'SRC' };
+  my $DEPS     = $d->{ 'DEPS' };
   my $OBJDIR   = ".OBJ.$t";
 
   if ( ! $TARGET )
@@ -336,7 +341,7 @@ sub make_target
   print "$OBJDIR: \n" .
         "\t\$(MKDIR) $OBJDIR\n\n";
 
-  print "$t: $OBJDIR \$(OBJ_$n)\n";
+  print "$t: $DEPS $OBJDIR \$(OBJ_$n)\n";
   my $target_link;
   if ( $TARGET =~ /\.a$/ )
     {
