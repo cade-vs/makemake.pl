@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #############################################################################
 =pod
-$Id: makemake.pl,v 1.2 2002/10/17 22:59:06 cade Exp $
+$Id: makemake.pl,v 1.3 2002/11/04 08:48:50 cade Exp $
 -----------------------------------------------------------------------------
 
 MakeMake.pl -- makefiles creating utility
@@ -49,6 +49,9 @@ jun2002: cade@biscom.net
 oct2002: jambo@datamax.bg
          $DEPFLAGS added for optional args for dependency checks.
          gcc -MM $DEPFLAGS file...
+
+nov2002: cade@datamax.bg
+         fixed modules build order (modules first)
 
 -----------------------------------------------------------------------------
 
@@ -234,19 +237,19 @@ else
   $_rebuild = "rebuild: ";
   $_link = "link: ";
 
+  if ( $MODULES )
+    {
+    $_all .= "modules ";
+    $_clean .= "clean-modules ";
+    $_rebuild .= "rebuild-modules ";
+    $_link .= "link-modules ";
+    }
   for( @TARGET )
     {
     $_all .= "$_ ";
     $_clean .= "clean-$_ ";
     $_rebuild .= "rebuild-$_ ";
     $_link .= "link-$_ ";
-    }
-  if ( $MODULES )
-    {
-    $_all .= "modules";
-    $_clean .= "clean-modules ";
-    $_rebuild .= "rebuild-modules ";
-    $_link .= "link-modules ";
     }
 
   print "$_all\n\n$_clean\n\n$_rebuild\n\n$_link\n";
