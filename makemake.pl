@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #############################################################################
 =pod
-$Id: makemake.pl,v 1.1 2002/08/17 11:54:32 cade Exp $
+$Id: makemake.pl,v 1.2 2002/10/17 22:59:06 cade Exp $
 -----------------------------------------------------------------------------
 
 MakeMake.pl -- makefiles creating utility
@@ -45,6 +45,10 @@ mar2001: cade@biscom.net
 
 jun2002: cade@biscom.net
          ranlib support (for versions of ar which don't have `s')
+
+oct2002: jambo@datamax.bg
+         $DEPFLAGS added for optional args for dependency checks.
+         gcc -MM $DEPFLAGS file...
 
 -----------------------------------------------------------------------------
 
@@ -292,6 +296,7 @@ sub make_target
     $_RANLIB  = $RANLIB[$REF[$n]];
     $_CFLAGS  = $CFLAGS[$REF[$n]] ;
     $_CCFLAGS = $CCFLAGS[$REF[$n]];
+    $_DEPFLAGS = $LDFLAGS[$REF[$n]];
     $_LDFLAGS = $LDFLAGS[$REF[$n]];
     $_ARFLAGS = $ARFLAGS[$REF[$n]];
     $_TARGET  = $TARGET[$REF[$n]];
@@ -305,6 +310,7 @@ sub make_target
   $_RANLIB  = $RANLIB[$n]  if $RANLIB[$n];
   $_CFLAGS  = $CFLAGS[$n]  if $CFLAGS[$n];
   $_CCFLAGS = $CCFLAGS[$n] if $CCFLAGS[$n];
+  $_DEPFLAGS = $DEPFLAGS[$n] if $LDFLAGS[$n];
   $_LDFLAGS = $LDFLAGS[$n] if $LDFLAGS[$n];
   $_ARFLAGS = $ARFLAGS[$n] if $ARFLAGS[$n];
   $_TARGET  = $TARGET[$n]  if $TARGET[$n];
@@ -313,16 +319,17 @@ sub make_target
   $_OBJDIR = ".OBJ.$n.$_TARGET";
 
   # for all undefined values -- take default ones
-  $_CC      = $CC      unless $_CC;
-  $_LD      = $LD      unless $_LD;
-  $_AR      = $AR      unless $_AR;
-  $_RANLIB  = $RANLIB  unless $_RANLIB;
-  $_CFLAGS  = $CFLAGS  unless $_CFLAGS;
-  $_CCFLAGS = $CCFLAGS unless $_CCFLAGS;
-  $_LDFLAGS = $LDFLAGS unless $_LDFLAGS;
-  $_ARFLAGS = $ARFLAGS unless $_ARFLAGS;
-  $_TARGET  = $TARGET  unless $_TARGET;
-  $_SRC     = $SRC     unless $_SRC;
+  $_CC       ||= $CC;
+  $_LD       ||= $LD;      
+  $_AR       ||= $AR;      
+  $_RANLIB   ||= $RANLIB;
+  $_CFLAGS   ||= $CFLAGS;  
+  $_CCFLAGS  ||= $CCFLAGS; 
+  $_LDFLAGS  ||= $LDFLAGS; 
+  $_DEPFLAGS ||= $LDFLAGS; 
+  $_ARFLAGS  ||= $ARFLAGS; 
+  $_TARGET   ||= $TARGET;  
+  $_SRC      ||= $SRC;     
 
   #=======================================================================
 
@@ -334,6 +341,7 @@ sub make_target
   print "CFLAGS_$n  = $_CFLAGS\n";
   print "CCFLAGS_$n = $_CCFLAGS\n";
   print "LDFLAGS_$n = $_LDFLAGS\n";
+  print "DEPFLAGS_$n = $_DEPFLAGS\n";
   print "ARFLAGS_$n = $_ARFLAGS\n";
   print "TARGET_$n  = $_TARGET\n";
 
@@ -396,7 +404,7 @@ sub make_target
   $c = 0;
   while( $c <= $#_OBJ )
     {
-    $deps = file_deps( $_SRC[$c] );
+    $deps = file_deps( $_SRC[$c], $_DEPFLAGS  );
     print "$_OBJ[$c]: $deps\n" .
           "\t\$(CC_$n) \$(CFLAGS_$n) \$(CCFLAGS_$n) -c $_SRC[$c] -o $_OBJ[$c]\n";
     $c++;
@@ -426,7 +434,8 @@ sub make_module
 sub file_deps
 {
   my $fname = shift;
-  $_ = `$CC -MM $fname 2> /dev/null`;
+  my $depflags = shift;
+  $_ = `$CC -MM $depflags $fname 2> /dev/null`;
   s/^[^:]+://;
   s/[\n\r]$//;
   $_;
