@@ -23,31 +23,42 @@ mm.conf/make.make format is:
   ---begin---
   # comments begin with # or ;
   ; this is also comment
-  
+
   # defaults for all targets
   CC      = gcc
   LD      = gcc
   AR      = ar rv
   RANLIB  = ranlib
   SRC     = *.c *.cpp *.cc *.cxx
-  
+
   # default commands
   MKDIR   = mkdir -p
   RMDIR   = rm -rf
   RMFILE  = rm -f
-  
+
   # if labels above doesn't exist in the input file the values shown
   # are considered defaults
-  
+
   # optional modules, subdirectories
   MODULES = module1 module2 module3
-  
+
+  # tells what actual makefile filename is. if this is defined
+  # makefile will be recreated if mm.conf is changed
+  # (optional)
+  MM_REBUILD=Makefile
+
+  # tells what makefile filename is. if this is defined
+  # makefile will be recreated and make process will be restarted
+  # if mm.conf is changed. this will override MM_BUILD if both used.
+  # (optional)
+  MM_RESTART=makefile
+
   # any other labels here are preserved but not used
   # this could be usefull to use make(1) vars, see next example
   DEBUG   = -g -pg
-  
+
   [target-name-1]
-  
+
   # this labels are required only if they should be different from
   # the defaults above
   CC      = gcc
@@ -59,11 +70,11 @@ mm.conf/make.make format is:
   # if `TARGET' is skipped then the output file name is taken from the
   # target name (i.e. `target-name-1' in this example)
   TARGET  = vfu
-  
+
   [target-name-2]
-  
+
   ...
-  
+
   ---end-----
 
 label `CFLAGS' is optional and is appended to `CCFLAGS' value
@@ -72,28 +83,28 @@ also each label's value can be appended to previous (or to defaults) with
 `+=' operator:
 
   ---cut---
-  SRC     = vstring.cpp 
-  SRC    += vstrlib.cpp 
+  SRC     = vstring.cpp
+  SRC    += vstrlib.cpp
   SRC    += regexp3.cpp
   ---cut---
 
 every target can inherit another one:
 
   ---cut---
-  
+
   [vstring.a]
-  
+
   CC      = g++
   LD      = g++
   CCFLAGS = -I. -O2
   TARGET  = libvstring.a
   SRC     = vstring.cpp vstrlib.cpp regexp3.cpp
-  
+
   [debug-vstring.a: vstring.a]
-  
+
   CCFLAGS += -g
   TARGET  = libvstring_dbg.a
-  
+
   ---cut---
 
 i.e. target `debug-vstring.a' inherits `vstring.a' but appends `-g' to the
@@ -111,6 +122,11 @@ the minimum mm.conf is:
 which will produce executable named `hi' out from all sources in the current
 directory...
 
+Only one of MM_REBUILD or MM_RESTART should be used. If both used, MM_RESTART
+will override MM_REBUILD. Makemake will not set default values for those two.
+When either of the two is added or removed from mm.conf, makefile must be
+manually recreated: 'makemake.pl > makefile' (or Makefile).
+
 =head1 CREDITS ANS MODIFICATIONS (HISTORY)
 
   dec1998: cade@biscom.net, ivo@datamax.bg
@@ -119,37 +135,37 @@ directory...
            found what I'm looking for... :)
            the closest approach is `tmake' ( `qmake' recently, 2002 ) made by
            Troll Tech for their `Qt' toolkit, but is far too complex...
-           
+
            also I wanted it in Perl :)
-  
+
   oct1999: cade@biscom.net
            added multi-target feature
-  
+
   aug2000: cade@biscom.net
            general cleanup, target clean uses `rm -rf' instead of `rmdir'
            added targets `rebuild' and `link' (does `relink' actually)
            globbing replaced with the use of `ls'
-  
+
   dec2000: cade@biscom.net
            added modules (subdir targets) support:
            $MODULES = "module1 module2 ...";
            now target name is required and not set to `a.out' by default
-  
+
   mar2001: cade@biscom.net
            added $MKDIR,$RMDIR,$RMFILE vars to support non-unix or
            non-standard commands for directory and file create/delete
            $REF[n] thing and target `re' are back :) see examples below
-  
+
   jun2002: cade@biscom.net
            ranlib support (for versions of ar which don't have `s')
-  
+
   oct2002: jambo@datamax.bg
            $DEPFLAGS added for optional args for dependency checks.
            gcc -MM $DEPFLAGS file...
-  
+
   nov2002: cade@datamax.bg
            fixed modules build order (modules first)
-  
+
   dec2002: cade@datamax.bg
            input file (mm.conf) format has changed. it is no more perl source
            but is simpler. near complete rewrite done.
@@ -158,11 +174,16 @@ directory...
            DEPS added which could be used as extra dependencies to other
            target in the same makefile (f.e. test apps for a library)
 
+  aug2006: cade@datamax.bg
+           MM_REBUILD and MM_RESTART added. both used to handle the case in
+           which mm.conf is changed and makefile needs to be recreated.
+           thanks to Eduard Bloch <edi@gmx.de>
+
 =head1 AUTHORS
 
- (c) Vladi Belperchinov-Shabanski 1998-2003
+ (c) Vladi Belperchinov-Shabanski 1998-2006
        <cade@biscom.net> <cade@datamax.bg>
- (c) Ivaylo Baylov 1998 
+ (c) Ivaylo Baylov 1998
        <ivo@datamax.bg>
 
 =head1 LICENSE
@@ -171,27 +192,29 @@ DISTRIBUTED UNDER GNU GPL. FOR FULL TEXT SEE ENCLOSED `COPYING' FILE.
 
 =head1 FEEDBACK
 
-For any questions, problems, notes (wishes?:)) contact authors freely!
-Note that since Ivo Baylov does not work actively on makemake.pl you
-should try first to contact Vladi <cade@biscom.net> or <cade@datamax.bg>
+For any questions, problems, notes (wishes?:)) contact Vladi at those e-mail
+addresses:
+
+  <cade@biscom.net> or <cade@datamax.bg>
 
 =head1 VERSION
 
-$Id: makemake.pl,v 1.8 2004/12/29 02:49:29 cade Exp $
+$Id: makemake.pl,v 1.9 2006/08/05 22:54:40 cade Exp $
 
 =cut
 #############################################################################
+use File::Basename; # FIXME: avoid if possible, implement own
 use strict;
 
 our @SECTIONS; # filled by read_config()
 
-my %C = ( '_' =>  { 
+my %C = ( '_' =>  {
                   'CC'    => 'gcc',
                   'LD'    => 'gcc',
                   'AR'    => 'ar rv',
                   'RANLIB'=> 'ranlib',
                   'SRC'   => '*.c *.cpp *.cc *.cxx',
-                
+
                   'MKDIR' => 'mkdir -p',
                   'RMDIR' => 'rm -rf',
                   'RMFILE'=> 'rm -f',
@@ -222,20 +245,23 @@ my $MKDIR  = $C{ '_' }{ 'MKDIR' };
 my $RMDIR  = $C{ '_' }{ 'RMDIR' };
 my $RMFILE = $C{ '_' }{ 'RMFILE' };
 
+my $MM_REBUILD = $C{ '_' }{ 'MM_REBUILD' };
+my $MM_RESTART = $C{ '_' }{ 'MM_RESTART' };
+
 my @MODULES = split /\s+/, $C{ '_' }{ 'MODULES' };
 
 my @TARGETS = @SECTIONS;
 
 print comment( "### GLOBAL TARGETS #" );
 
-print "default: all\n\n";
-print "re: rebuild\n\n";
-print "li: link\n\n";
+print "default: mm_update all\n\n";
+print "re: mm_update rebuild\n\n";
+print "li: mm_update link\n\n";
 
-my $_all = "all: ";
-my $_clean = "clean: ";
-my $_rebuild = "rebuild: ";
-my $_link = "link: ";
+my $_all = "all: mm_update ";
+my $_clean = "clean: mm_update ";
+my $_rebuild = "rebuild: mm_update ";
+my $_link = "link: mm_update ";
 
 if ( @MODULES )
   {
@@ -271,6 +297,45 @@ if ( @MODULES )
   make_module( "rebuild" );
   make_module( "link" );
   }
+
+if( $MM_RESTART ne '' )
+{
+print <<END;
+
+mm_update: $MM_RESTART
+
+$MM_RESTART: mm.conf
+\t\@echo "MAKEFILENAME: \$(MAKEFILES)"
+\t\@#ifneq (\$(MAKEMAKERESTARTED),1)
+\t\@echo "mm.conf changed, trying to recreate $MM_RESTART..."
+\tmakemake.pl mm.conf > $MM_RESTART
+\t\$(MAKE) MAKEMAKERESTARTED=1
+\t@#endif
+
+END
+}
+elsif( $MM_REBUILD ne '' )
+{
+print <<END;
+
+mm_update: $MM_REBUILD
+
+$MM_REBUILD: mm.conf
+\tmakemake.pl mm.conf > $MM_REBUILD
+\t\@echo "$MM_REBUILD recreated, please start make again..."
+\t\@exit 1
+
+END
+}
+else
+{
+print <<END;
+
+mm_update:
+\t
+
+END
+}
 
 print comment( "### MAKEMAKE ENDS HERE #" );
 
@@ -323,7 +388,8 @@ sub make_target
     {
     push @SRC, $_;
     /^(.*)\.[^\.]+$/;
-    push @OBJ,"$OBJDIR/$1.o";
+    # push @OBJ,"$OBJDIR/$1.o";
+    push @OBJ,"$OBJDIR/" . basename($1) . ".o";
     }
 
   print comment( "### SOURCES FOR TARGET $n: $TARGET #" );
@@ -372,14 +438,14 @@ sub make_target
     my $S = shift @SRC;
     my $O = shift @OBJ;
     my $DEPS = file_deps( $S, $DEPFLAGS  );
-    
+
     my $SS = sprintf "%-20s", $S; # pretty printing
     print "$O: $S $DEPS\n" .
           "\t\$(CC_$n) \$(CFLAGS_$n) \$(CCFLAGS_$n) -c $SS -o $O\n";
     }
 
   print "\n";
-  
+
   logger( "info: target $t ($TARGET) ok" );
 }
 
@@ -392,7 +458,7 @@ sub make_module
   my $modules_list = "";
   for( @MODULES )
     {
-    $modules_list .= "\tmake -C $_ $target\n";
+    $modules_list .= "\t$(MAKE) -C $_ $target\n";
     }
   $target .= "-" if $target;
   print $target . "modules:\n$modules_list\n";
@@ -417,9 +483,9 @@ sub read_config
   my $fn = shift;
   my $hr = shift;
   my $sec = '_';
-  
+
   @SECTIONS = ();
-  
+
   my $i;
   if(! open $i, $fn )
     {
@@ -464,9 +530,9 @@ sub read_config
       next;
       }
     logger( "error: parse error in $fn, line $., ($_)" );
-    return 0;  
+    return 0;
     }
-  close $i;  
+  close $i;
   return 1;
 }
 
