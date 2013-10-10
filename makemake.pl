@@ -348,23 +348,46 @@ sub make_target
   my $t = shift; # target id
   my $d = shift; # data
 
-  my $CC       = $d->{ 'CC' };
-  my $LD       = $d->{ 'LD' };
-  my $AR       = $d->{ 'AR' };
-  my $RANLIB   = $d->{ 'RANLIB' };
-  my $CCFLAGS  = $d->{ 'CCFLAGS' } . ' ' . $d->{ 'CFLAGS' };
-  my $LDFLAGS  = $d->{ 'LDFLAGS' };
-  my $DEPFLAGS = $d->{ 'DEPFLAGS' };
-  my $ARFLAGS  = $d->{ 'ARFLAGS' };
-  my $TARGET   = $d->{ 'TARGET' };
-  my $SRC      = $d->{ 'SRC' };
-  my $DEPS     = $d->{ 'DEPS' };
-  my $OBJDIR   = ".OBJ.$t";
+  my $CC         = $d->{ 'CC' };
+  my $LD         = $d->{ 'LD' };
+  my $AR         = $d->{ 'AR' };
+  my $RANLIB     = $d->{ 'RANLIB' };
+  my $CCFLAGS    = $d->{ 'CCFLAGS' } . ' ' . $d->{ 'CFLAGS' };
+  my $LDFLAGS    = $d->{ 'LDFLAGS' };
+  my $DEPFLAGS   = $d->{ 'DEPFLAGS' };
+  my $ARFLAGS    = $d->{ 'ARFLAGS' };
+  my $TARGET     = $d->{ 'TARGET' };
+  my $SRC        = $d->{ 'SRC' };
+  my $EXTRA      = $d->{ 'EXTRA' };
+  my $EXTRA_TEXT = $d->{ 'EXTRA_TEXT' };
+  my $DEPS       = $d->{ 'DEPS' };
+  my $MJ_DEPS    = $d->{ 'MJ_DEPS' };
+  my $OBJDIR     = ".OBJ.$t";
 
   if ( ! $TARGET )
     {
     $TARGET = $t;
     logger( "warning: using target name as output ($t)" );
+    }
+
+  my $J_DEPS;
+  my $J_INC;
+  my $J_LIB;
+  if( $MJ_DEPS )
+    {
+    my @J = split /[,\s]+/, $MJ_DEPS;
+    for my $j ( @J )
+      {
+      if( $j =~ /^(.*?)\/lib([^\/\.]+)(\.a)$/ )
+        {
+        my $p = $1;
+        my $f = $2;
+        $J_DEPS .= "$j ";
+        $J_INC  .= "-I$p ";
+        $J_LIB  .= "-L$p -l$f ";
+        }
+
+      }
     }
 
   print comment( "### TARGET $n: $TARGET #" );
@@ -373,8 +396,8 @@ sub make_target
   print "LD_$n       = $LD\n";
   print "AR_$n       = $AR\n";
   print "RANLIB_$n   = $RANLIB\n";
-  print "CCFLAGS_$n  = $CCFLAGS\n";
-  print "LDFLAGS_$n  = $LDFLAGS\n";
+  print "CCFLAGS_$n  = $CCFLAGS $J_INC\n";
+  print "LDFLAGS_$n  = $LDFLAGS $J_LIB\n";
   print "DEPFLAGS_$n = $DEPFLAGS\n";
   print "ARFLAGS_$n  = $ARFLAGS\n";
   print "TARGET_$n   = $TARGET\n";
@@ -400,25 +423,29 @@ sub make_target
   print comment( "#### OBJECTS FOR TARGET $n: $TARGET #" );
   print "OBJ_$n= \\\n";
   for( @OBJ )
-    { print "     $_ \\\n"; }
+    {
+    print "     $_ \\\n";
+    }
 
   print comment( "### TARGET DEFINITION FOR TARGET $n: $TARGET #" );
 
   print "$OBJDIR: \n" .
         "\t\$(MKDIR) $OBJDIR\n\n";
 
-  print "$t: $DEPS $OBJDIR \$(OBJ_$n)\n";
+  print "$t: $DEPS $J_DEPS $OBJDIR \$(OBJ_$n)\n";
   my $target_link;
   if ( $TARGET =~ /\.a$/ )
     {
     $target_link  = "\t\$(AR_$n) \$(ARFLAGS_$n) \$(TARGET_$n) \$(OBJ_$n)\n";
     $target_link .= "\t\$(RANLIB_$n) \$(TARGET_$n)\n";
-    $target_link .= "\n";
     }
   else
     {
-    $target_link = "\t\$(LD_$n) \$(OBJ_$n) \$(LDFLAGS_$n) -o \$(TARGET_$n)\n\n";
+    $target_link = "\t\$(LD_$n) \$(OBJ_$n) \$(LDFLAGS_$n) -o \$(TARGET_$n)\n";
     }
+
+  $target_link .= "\t$EXTRA\n" if $EXTRA ne '';
+  $target_link .= "\n";
   print $target_link;
 
   print "clean-$t: \n" .
@@ -445,6 +472,8 @@ sub make_target
     }
 
   print "\n";
+
+  print "\n$EXTRA_TEXT\n\n" if $EXTRA_TEXT ne '';
 
   logger( "info: target $t ($TARGET) ok" );
 }
@@ -519,14 +548,29 @@ sub read_config
       }
     if ( /^\s*(\S+)+\s*(\+)?=+(.*)$/ )
       {
-      if ( $2 eq '+' )
+      my $name = uc $1;
+      my $add  = $2;
+      my $v = fixval( $3 );
+      $v =~ s/\$\((\S+)\)/ $hr->{ $sec }{ uc $1 } || $hr->{ '_' }{ uc $1 } || ''/ge;
+      if ( $add eq '+' )
         {
-        $hr->{ $sec }{ uc $1 } .= ' ' . fixval( $3 );
+        $hr->{ $sec }{ $name } .= ' ' . $v;
         }
       else
         {
-        $hr->{ $sec }{ uc $1 } = fixval( $3 );
+        $hr->{ $sec }{ $name } = $v;
         }
+      next;
+      }
+    if ( /^\s*BEGIN_EXTRA/i )
+      {
+      my $v;
+      while(<$i>)
+        {
+        last if /^\s*END_EXTRA/i;
+        $v .= $_;
+        }
+      $hr->{ $sec }{ 'EXTRA_TEXT' } = $v;
       next;
       }
     logger( "error: parse error in $fn, line $., ($_)" );
