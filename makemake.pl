@@ -458,7 +458,7 @@ sub make_module
   my $modules_list = "";
   for( @MODULES )
     {
-    $modules_list .= "\t$(MAKE) -C $_ $target\n";
+    $modules_list .= "\t\$(MAKE) -C $_ $target\n";
     }
   $target .= "-" if $target;
   print $target . "modules:\n$modules_list\n";
