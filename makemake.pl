@@ -133,8 +133,8 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
            * first version *
            though there are several utilities like this I still haven't
            found what I'm looking for... :)
-           the closest approach is `tmake' ( `qmake' recently, 2002 ) made by
-           Troll Tech for their `Qt' toolkit, but is far too complex...
+           the closest approach is `tmake' ( `qmake' recently, 2002 ) made 
+           by Troll Tech for their `Qt' toolkit, but is far too complex...
 
            also I wanted it in Perl :)
 
@@ -181,7 +181,7 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
 
 =head1 AUTHORS
 
- (c) Vladi Belperchinov-Shabanski 1998-2006
+ (c) Vladi Belperchinov-Shabanski 1998-2015
        <cade@biscom.net> <cade@datamax.bg>
  (c) Ivaylo Baylov 1998
        <ivo@datamax.bg>
@@ -199,7 +199,7 @@ addresses:
 
 =head1 VERSION
 
-$Id: makemake.pl,v 1.9 2006/08/05 22:54:40 cade Exp $
+  Latest is 20150819
 
 =cut
 #############################################################################

@@ -1,0 +1,2 @@
+mm.conf   -- source makemake.pl file
+makefile  -- result of 'makemake.pl mm.conf > makefile'
