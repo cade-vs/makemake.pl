@@ -9,7 +9,7 @@ MakeMake.pl -- Perl-based C/C++ makefile generator
 
 # DESCRIPTION
 
-input file is \`mm.conf', \`make.make' or name given as 1st arg.
+input file is 'mm.conf', 'make.make' or name given as 1st arg.
 
 output is printed to the stdout.
 
@@ -64,8 +64,8 @@ mm.conf/make.make format is:
     CCFLAGS = -I../vslib -I/usr/include/ncurses -O2
     LDFLAGS = -L../vslib -lvslib -lncurses
     SRC     = *.cpp            # set source files
-    # if `TARGET' is skipped then the output file name is taken from the
-    # target name (i.e. `target-name-1' in this example)
+    # if 'TARGET' is skipped then the output file name is taken from the
+    # target name (i.e. 'target-name-1' in this example)
     TARGET  = vfu
 
     [target-name-2]
@@ -74,10 +74,10 @@ mm.conf/make.make format is:
 
     ---end-----
 
-label \`CFLAGS' is optional and is appended to \`CCFLAGS' value
+label 'CFLAGS' is optional and is appended to 'CCFLAGS' value
 
 also each label's value can be appended to previous (or to defaults) with
-\`+=' operator:
+'+=' operator:
 
     ---cut---
     SRC     = vstring.cpp
@@ -104,10 +104,10 @@ every target can inherit another one:
 
     ---cut---
 
-i.e. target \`debug-vstring.a' inherits \`vstring.a' but appends \`-g' to the
-compile options and changes output file name to \`libvstring\_dbg.a'
+i.e. target 'debug-vstring.a' inherits 'vstring.a' but appends '-g' to the
+compile options and changes output file name to 'libvstring\_dbg.a'
 
-if you set target name to something that ends with \`.a' -- makemake.pl will
+if you set target name to something that ends with '.a' -- makemake.pl will
 produce library file target (i.e. will invoke AR instead of LD).
 
 the minimum mm.conf is:
@@ -116,7 +116,7 @@ the minimum mm.conf is:
     [hi]
     ---cut---
 
-which will produce executable named \`hi' out from all sources in the current
+which will produce executable named 'hi' out from all sources in the current
 directory...
 
 Only one of MM\_REBUILD or MM\_RESTART should be used. If both used, MM\_RESTART
@@ -130,8 +130,8 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
              * first version *
              though there are several utilities like this I still haven't
              found what I'm looking for... :)
-             the closest approach is `tmake' ( `qmake' recently, 2002 ) made 
-             by Troll Tech for their `Qt' toolkit, but is far too complex...
+             the closest approach is 'tmake' ( 'qmake' recently, 2002 ) made 
+             by Troll Tech for their 'Qt' toolkit, but is far too complex...
 
            also I wanted it in Perl :)
 
@@ -139,22 +139,22 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
              added multi-target feature
 
     aug2000: cade@biscom.net
-             general cleanup, target clean uses `rm -rf' instead of `rmdir'
-             added targets `rebuild' and `link' (does `relink' actually)
-             globbing replaced with the use of `ls'
+             general cleanup, target clean uses 'rm -rf' instead of 'rmdir'
+             added targets 'rebuild' and 'link' (does 'relink' actually)
+             globbing replaced with the use of 'ls'
 
     dec2000: cade@biscom.net
              added modules (subdir targets) support:
              $MODULES = "module1 module2 ...";
-             now target name is required and not set to `a.out' by default
+             now target name is required and not set to 'a.out' by default
 
     mar2001: cade@biscom.net
              added $MKDIR,$RMDIR,$RMFILE vars to support non-unix or
              non-standard commands for directory and file create/delete
-             $REF[n] thing and target `re' are back :) see examples below
+             $REF[n] thing and target 're' are back :) see examples below
 
     jun2002: cade@biscom.net
-             ranlib support (for versions of ar which don't have `s')
+             ranlib support (for versions of ar which don't have 's')
 
     oct2002: jambo@datamax.bg
              $DEPFLAGS added for optional args for dependency checks.
@@ -185,14 +185,15 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
 
 # LICENSE
 
-DISTRIBUTED UNDER GNU GPL. FOR FULL TEXT SEE ENCLOSED \`COPYING' FILE.
+DISTRIBUTED UNDER GNU GPLv2. FOR FULL TEXT SEE ENCLOSED 'COPYING' FILE.
 
 # FEEDBACK
 
-For any questions, problems, notes (wishes?:)) contact Vladi at those e-mail
-addresses:
+For any questions, problems, notes, contact me at:
 
-    <cade@biscom.net> or <cade@datamax.bg>
+    <cade@bis.bg> 
+    <cade@biscom.net> 
+    <cade@datamax.bg>
 
 # VERSION
 
