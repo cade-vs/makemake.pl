@@ -79,6 +79,10 @@ mm.conf/make.make format is:
 
 label 'CFLAGS' is optional and is appended to 'CCFLAGS' value
 
+you can always override CC/LD/etc. vars with running make like:
+
+  make CC=my-compiler.bin  LD=my-linker.bin
+
 also each label's value can be appended to previous (or to defaults) with
 '+=' operator:
 
@@ -179,12 +183,18 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
            which mm.conf is changed and makefile needs to be recreated.
            thanks to Eduard Bloch <edi@gmx.de>
 
+  aug2020: cade@datamax.bg
+           CC_1, CC_2, etc. will now refer to CC by default, still may
+           be overriden with:
+           
+             make CC=gxxzz
+           or  
+             make CC_2=gxxzz
+
 =head1 AUTHORS
 
- (c) Vladi Belperchinov-Shabanski 1998-2015
+ (c) Vladi Belperchinov-Shabanski 1998-2020
        <cade@biscom.net> <cade@datamax.bg>
- (c) Ivaylo Baylov 1998
-       <ivo@datamax.bg>
 
 =head1 LICENSE
 
@@ -200,7 +210,7 @@ For any questions, problems, notes, contact me at:
 
 =head1 VERSION
 
-  Latest is 20150819
+  Latest is 20200605
 
 =cut
 #############################################################################
@@ -393,10 +403,10 @@ sub make_target
 
   print comment( "### TARGET $n: $TARGET #" );
 
-  print "CC_$n       = $CC\n";
-  print "LD_$n       = $LD\n";
-  print "AR_$n       = $AR\n";
-  print "RANLIB_$n   = $RANLIB\n";
+  print "CC_$n       = \$(CC)\n";
+  print "LD_$n       = \$(LD)\n";
+  print "AR_$n       = \$(AR)\n";
+  print "RANLIB_$n   = \$(RANLIB)\n";
   print "CCFLAGS_$n  = $CCFLAGS $J_INC\n";
   print "LDFLAGS_$n  = $LDFLAGS $J_LIB\n";
   print "DEPFLAGS_$n = $DEPFLAGS\n";
@@ -552,7 +562,7 @@ sub read_config
       my $name = uc $1;
       my $add  = $2;
       my $v = fixval( $3 );
-      $v =~ s/\$\((\S+)\)/ $hr->{ $sec }{ uc $1 } || $hr->{ '_' }{ uc $1 } || ''/ge;
+      $v =~ s/\%\((\S+)\)/ $hr->{ $sec }{ uc $1 } || $hr->{ '_' }{ uc $1 } || ''/ge;
       if ( $add eq '+' )
         {
         $hr->{ $sec }{ $name } .= ' ' . $v;
