@@ -70,6 +70,7 @@ mm.conf/make.make format is:
   # if 'TARGET' is skipped then the output file name is taken from the
   # target name (i.e. 'target-name-1' in this example)
   TARGET  = vfu
+  DEFAULT
 
   [target-name-2]
 
@@ -167,10 +168,10 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
            $DEPFLAGS added for optional args for dependency checks.
            gcc -MM $DEPFLAGS file...
 
-  nov2002: cade@datamax.bg
+  nov2002: cade@biscom.net
            fixed modules build order (modules first)
 
-  dec2002: cade@datamax.bg
+  dec2002: cade@biscom.net
            input file (mm.conf) format has changed. it is no more perl source
            but is simpler. near complete rewrite done.
 
@@ -178,12 +179,12 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
            DEPS added which could be used as extra dependencies to other
            target in the same makefile (f.e. test apps for a library)
 
-  aug2006: cade@datamax.bg
+  aug2006: cade@biscom.net
            MM_REBUILD and MM_RESTART added. both used to handle the case in
            which mm.conf is changed and makefile needs to be recreated.
            thanks to Eduard Bloch <edi@gmx.de>
 
-  aug2020: cade@datamax.bg
+  jul2020: cade@biscom.net
            CC_1, CC_2, etc. will now refer to CC by default, still may
            be overriden with:
            
@@ -191,10 +192,13 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
            or  
              make CC_2=gxxzz
 
+  aug2020: cade@biscom.net
+           added DEFAULT flag to mark default build target(s)
+
 =head1 AUTHORS
 
  (c) Vladi Belperchinov-Shabanski 1998-2020
-       <cade@biscom.net> <cade@datamax.bg>
+       <cade@biscom.net> <shabanski@gmail.com> <cade@cpan.org>
 
 =head1 LICENSE
 
@@ -265,14 +269,21 @@ my @TARGETS = @SECTIONS;
 
 print comment( "### GLOBAL TARGETS #" );
 
-print "default: mm_update all\n\n";
-print "re: mm_update rebuild\n\n";
-print "li: mm_update link\n\n";
-
 my $_all = "all: mm_update ";
 my $_clean = "clean: mm_update ";
 my $_rebuild = "rebuild: mm_update ";
 my $_link = "link: mm_update ";
+my $_default;
+
+for( @TARGETS )
+  {
+  $_default .= " $_ " if $C{ $_ }{ 'DEFAULT' };
+  }
+
+print $_default ? "default: mm_update $_default\n\n" : "default: mm_update all\n\n";
+print "re: mm_update rebuild\n\n";
+print "li: mm_update link\n\n";
+
 
 if ( @MODULES )
   {
@@ -403,10 +414,10 @@ sub make_target
 
   print comment( "### TARGET $n: $TARGET #" );
 
-  print "CC_$n       = \$(CC)\n";
-  print "LD_$n       = \$(LD)\n";
-  print "AR_$n       = \$(AR)\n";
-  print "RANLIB_$n   = \$(RANLIB)\n";
+  print "CC_$n       = $CC\n";
+  print "LD_$n       = $LD\n";
+  print "AR_$n       = $AR\n";
+  print "RANLIB_$n   = $RANLIB\n";
   print "CCFLAGS_$n  = $CCFLAGS $J_INC\n";
   print "LDFLAGS_$n  = $LDFLAGS $J_LIB\n";
   print "DEPFLAGS_$n = $DEPFLAGS\n";
@@ -464,6 +475,8 @@ sub make_target
         "\t\$(RMDIR) $OBJDIR\n\n";
 
   print "rebuild-$t: clean-$t $t\n\n";
+
+  print "re-$t: rebuild-$t\n\n";
 
   print "link-$t: $OBJDIR \$(OBJ_$n)\n" .
         "\t\$(RMFILE) $TARGET\n" .
