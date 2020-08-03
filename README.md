@@ -15,8 +15,6 @@ output is printed to the stdout.
 
 mm.conf/make.make format is:
 
-
-
     ---begin---
     # comments begin with # or ;
     ; this is also comment
@@ -67,6 +65,7 @@ mm.conf/make.make format is:
     # if 'TARGET' is skipped then the output file name is taken from the
     # target name (i.e. 'target-name-1' in this example)
     TARGET  = vfu
+    DEFAULT
 
     [target-name-2]
 
@@ -75,6 +74,10 @@ mm.conf/make.make format is:
     ---end-----
 
 label 'CFLAGS' is optional and is appended to 'CCFLAGS' value
+
+you can always override CC/LD/etc. vars with running make like:
+
+    make CC=my-compiler.bin  LD=my-linker.bin
 
 also each label's value can be appended to previous (or to defaults) with
 '+=' operator:
@@ -133,7 +136,7 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
              the closest approach is 'tmake' ( 'qmake' recently, 2002 ) made 
              by Troll Tech for their 'Qt' toolkit, but is far too complex...
 
-           also I wanted it in Perl :)
+             also I wanted it in Perl :)
 
     oct1999: cade@biscom.net
              added multi-target feature
@@ -160,10 +163,10 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
              $DEPFLAGS added for optional args for dependency checks.
              gcc -MM $DEPFLAGS file...
 
-    nov2002: cade@datamax.bg
+    nov2002: cade@biscom.net
              fixed modules build order (modules first)
 
-    dec2002: cade@datamax.bg
+    dec2002: cade@biscom.net
              input file (mm.conf) format has changed. it is no more perl source
              but is simpler. near complete rewrite done.
 
@@ -171,17 +174,26 @@ manually recreated: 'makemake.pl > makefile' (or Makefile).
              DEPS added which could be used as extra dependencies to other
              target in the same makefile (f.e. test apps for a library)
 
-    aug2006: cade@datamax.bg
+    aug2006: cade@biscom.net
              MM_REBUILD and MM_RESTART added. both used to handle the case in
              which mm.conf is changed and makefile needs to be recreated.
              thanks to Eduard Bloch <edi@gmx.de>
 
+    jul2020: cade@biscom.net
+             CC_1, CC_2, etc. will now refer to CC by default, still may
+             be overriden with:
+             
+               make CC=gxxzz
+             or  
+               make CC_2=gxxzz
+
+    aug2020: cade@biscom.net
+             added DEFAULT flag to mark default build target(s)
+
 # AUTHORS
 
-    (c) Vladi Belperchinov-Shabanski 1998-2015
-          <cade@biscom.net> <cade@datamax.bg>
-    (c) Ivaylo Baylov 1998
-          <ivo@datamax.bg>
+    (c) Vladi Belperchinov-Shabanski 1998-2020
+          <cade@biscom.net> <shabanski@gmail.com> <cade@cpan.org>
 
 # LICENSE
 
@@ -197,4 +209,4 @@ For any questions, problems, notes, contact me at:
 
 # VERSION
 
-    Latest is 20150819
+    Latest is 20200605
